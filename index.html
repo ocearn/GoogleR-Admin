@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Google Review Work</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #8774e1;
+            --secondary-color: #6a59b5;
+            --bg-color: #f4f6f9;
+            --text-color: #333;
+            --sidebar-bg: #2c3e50;
+            --sidebar-text: #ecf0f1;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --info-color: #3498db;
+            --card-bg: #ffffff;
+            --border-color: #ddd;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar Styles */
+        .sidebar {
+            width: 250px;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            height: 100vh;
+            position: fixed;
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+        
+        .sidebar-header {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+        
+        .sidebar-header h2 {
+            font-size: 22px;
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-header p {
+            font-size: 14px;
+            color: #aaa;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+            margin-top: 20px;
+        }
+        
+        .sidebar-menu li {
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-menu a {
+            display: block;
+            padding: 12px 20px;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+        
+        .sidebar-menu a:hover,
+        .sidebar-menu a.active {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left-color: var(--primary-color);
+        }
+        
+        .sidebar-menu i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        /* Main Content Styles */
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
+            padding: 20px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .stat-card .icon {
+            font-size: 30px;
+            margin-bottom: 15px;
+        }
+        
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card .label {
+            color: #777;
+            font-size: 14px;
+        }
+        
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        .btn-info {
+            background-color: var(--info-color);
+            color: white;
+        }
+        
+        .btn-warning {
+            background-color: var(--warning-color);
+            color: white;
+        }
+        
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        table th,
+        table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        
+        table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-approved {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        
+        .modal-content {
+            background-color: var(--card-bg);
+            margin: 50px auto;
+            padding: 25px;
+            border-radius: 10px;
+            max-width: 800px;
+            width: 90%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+        
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .close:hover {
+            color: #333;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .tab-container {
+            margin-top: 20px;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        
+        .tab-btn {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            color: #777;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .notification-form {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        
+        .submission-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .detail-item {
+            margin-bottom: 15px;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        
+        .detail-value {
+            color: #333;
+        }
+        
+        .screenshot-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .screenshot-img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .screenshot-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        
+        .review-watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 40px;
+            color: rgba(0, 0, 0, 0.1);
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        .disabled-overlay {
+            position: relative;
+        }
+        
+        .disabled-overlay::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.7);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Admin Panel</h2>
+            <p>Google Review Work</p>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="#" class="active" data-tab="dashboard"><i class="fas fa-tachometer-alt"></i> ড্যাশবোর্ড</a></li>
+            <li><a href="#" data-tab="tasks"><i class="fas fa-tasks"></i> টাস্ক ম্যানেজমেন্ট</a></li>
+            <li><a href="#" data-tab="submissions"><i class="fas fa-clipboard-check"></i> সাবমিশন রিভিউ</a></li>
+            <li><a href="#" data-tab="users"><i class="fas fa-users"></i> ইউজার ম্যানেজমেন্ট</a></li>
+            <li><a href="#" data-tab="transactions"><i class="fas fa-exchange-alt"></i> ট্রানজেকশন</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <h1 class="page-title" id="page-title">ড্যাশবোর্ড</h1>
+            <div>
+                <button class="btn btn-primary" id="refresh-btn"><i class="fas fa-sync-alt"></i> রিফ্রেশ</button>
+            </div>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard-tab" class="tab-content active">
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="icon" style="color: var(--primary-color);">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="value" id="total-users">0</div>
+                    <div class="label">মোট ইউজার</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon" style="color: var(--info-color);">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <div class="value" id="total-tasks">0</div>
+                    <div class="label">মোট টাস্ক</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon" style="color: var(--warning-color);">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="value" id="pending-submissions">0</div>
+                    <div class="label">পেন্ডিং সাবমিশন</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon" style="color: var(--success-color);">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <div class="value" id="total-payout">0৳</div>
+                    <div class="label">মোট পেমেন্ট</div>
+                </div>
+            </div>
+
+            <!-- Recent Submissions -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">সাম্প্রতিক সাবমিশন</h3>
+                </div>
+                <div class="card-body">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ইউজার</th>
+                                <th>টাস্ক</th>
+                                <th>পরিমাণ</th>
+                                <th>স্ট্যাটাস</th>
+                                <th>তারিখ</th>
+                                <th>অ্যাকশন</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-submissions">
+                            <!-- Recent submissions will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tasks Management Tab -->
+        <div id="tasks-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">টাস্ক তালিকা</h3>
+                    <button class="btn btn-primary" id="add-task-btn"><i class="fas fa-plus"></i> নতুন টাস্ক</button>
+                </div>
+                <div class="card-body">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>টাস্ক নং</th>
+                                <th>টাইটেল</th>
+                                <th>বিবরণ</th>
+                                <th>পরিমাণ</th>
+                                <th>স্ট্যাটাস</th>
+                                <th>ক্রিয়া</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasks-list">
+                            <!-- Tasks will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submissions Review Tab -->
+        <div id="submissions-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">সাবমিশন তালিকা</h3>
+                </div>
+                <div class="card-body">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>টাস্ক নং</th>
+                                <th>ইউজার</th>
+                                <th>টাস্ক</th>
+                                <th>পরিমাণ</th>
+                                <th>স্ট্যাটাস</th>
+                                <th>তারিখ</th>
+                                <th>অ্যাকশন</th>
+                            </tr>
+                        </thead>
+                        <tbody id="submissions-list">
+                            <!-- All submissions will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Management Tab -->
+        <div id="users-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">ইউজার তালিকা</h3>
+                </div>
+                <div class="card-body">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>নাম</th>
+                                <th>ইউজারনেম</th>
+                                <th>ব্যালেন্স</th>
+                                <th>টাস্ক সম্পন্ন</th>
+                                <th>স্ট্যাটাস</th>
+                                <th>তারিখ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-list">
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transactions Tab -->
+        <div id="transactions-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">ট্রানজেকশন লগ</h3>
+                </div>
+                <div class="card-body">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ইউজার</th>
+                                <th>টাইপ</th>
+                                <th>পরিমাণ</th>
+                                <th>বিবরণ</th>
+                                <th>তারিখ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactions-list">
+                            <!-- Transactions will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Task Modal -->
+    <div id="task-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modal-task-title">নতুন টাস্ক যোগ করুন</h2>
+            
+            <div class="form-group">
+                <label for="task-number">টাস্ক নম্বর*</label>
+                <input type="text" id="task-number" placeholder="টাস্ক নম্বর লিখুন (অনন্য)" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="task-title">টাস্ক টাইটেল*</label>
+                <input type="text" id="task-title" placeholder="টাস্কের টাইটেল লিখুন" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="task-description">টাস্ক বিবরণ*</label>
+                <textarea id="task-description" placeholder="টাস্কের বিবরণ লিখুন" rows="3" required></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="task-amount">টাস্ক পরিমাণ (৳)*</label>
+                <input type="number" id="task-amount" placeholder="টাস্কের পরিমাণ লিখুন" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="task-video">ভিডিও লিংক (ঐচ্ছিক)</label>
+                <input type="url" id="task-video" placeholder="ভিডিও লিংক লিখুন">
+            </div>
+            
+            <div class="form-group">
+                <label for="work-link">কাজের লিংক*</label>
+                <input type="url" id="work-link" placeholder="কাজের লিংক লিখুন" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="task-difficulty">কঠিনতা</label>
+                <select id="task-difficulty">
+                    <option value="Easy">সহজ</option>
+                    <option value="Medium">মধ্যম</option>
+                    <option value="Hard">কঠিন</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="task-time">সময় (মিনিট)</label>
+                <input type="number" id="task-time" placeholder="সময় লিখুন" value="5">
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="require-screenshot" checked> স্ক্রিনশট প্রয়োজন?
+                </label>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="require-review-link" checked> রিভিউ লিংক প্রয়োজন?
+                </label>
+            </div>
+            
+            <button id="save-task-btn" class="btn btn-primary">টাস্ক সেভ করুন</button>
+        </div>
+    </div>
+
+    <!-- Submission Details Modal -->
+    <div id="submission-detail-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>সাবমিশন ডিটেইলস</h2>
+            
+            <div id="review-watermark" class="review-watermark" style="display: none;">APPROVED</div>
+            
+            <div class="submission-details">
+                <div>
+                    <div class="detail-item">
+                        <div class="detail-label">সাবমিশন আইডি</div>
+                        <div class="detail-value" id="detail-submission-id"></div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">ইউজার আইডি</div>
+                        <div class="detail-value" id="detail-user-id"></div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">টাস্ক আইডি</div>
+                        <div class="detail-value" id="detail-task-id"></div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">টাস্ক নম্বর</div>
+                        <div class="detail-value" id="detail-task-number"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="detail-item">
+                        <div class="detail-label">টাস্ক নাম</div>
+                        <div class="detail-value" id="detail-task-title"></div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">পরিমাণ</div>
+                        <div class="detail-value" id="detail-amount"></div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">স্ট্যাটাস</div>
+                        <div class="detail-value" id="detail-status"></div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">জমা দেওয়ার তারিখ</div>
+                        <div class="detail-value" id="detail-created-at"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="screenshot-container" id="screenshot-container">
+                <div class="detail-label">স্ক্রিনশট</div>
+                <img id="detail-screenshot" class="screenshot-img" src="" alt="Screenshot">
+                <div class="screenshot-actions">
+                    <button class="btn btn-info btn-sm" id="view-screenshot-btn">রিভিউ</button>
+                    <a class="btn btn-primary btn-sm" id="download-screenshot-btn" download>ডাউনলোড</a>
+                </div>
+            </div>
+            
+            <div class="form-group" id="review-link-container">
+                <div class="detail-label">রিভিউ লিংক</div>
+                <a id="detail-review-link" href="#" target="_blank" style="word-break: break-all;">লিংক দেখুন</a>
+            </div>
+            
+            <div class="form-group">
+                <label for="detail-status-select">স্ট্যাটাস আপডেট</label>
+                <select id="detail-status-select">
+                    <option value="pending">পেন্ডিং</option>
+                    <option value="approved">অনুমোদিত</option>
+                    <option value="rejected">বাতিল</option>
+                </select>
+            </div>
+            
+            <div class="notification-form">
+                <h4>ইউজারকে নোটিফিকেশন পাঠান</h4>
+                <div class="form-group">
+                    <label for="detail-notification-message">মেসেজ</label>
+                    <textarea id="detail-notification-message" rows="3" placeholder="ইউজারকে পাঠানোর মেসেজ লিখুন..."></textarea>
+                </div>
+            </div>
+            
+            <button id="save-submission-btn" class="btn btn-primary">আপডেট সেভ করুন</button>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCs6ePkTxvMjcERh6yAdvjPqxIu6X7jhRM",
+            authDomain: "fbm-market-bot.firebaseapp.com",
+            databaseURL: "https://fbm-market-bot-default-rtdb.firebaseio.com",
+            projectId: "fbm-market-bot",
+            storageBucket: "fbm-market-bot.firebasestorage.app",
+            messagingSenderId: "711610016805",
+            appId: "1:711610016805:web:c5a019c9af1485ac984bcc"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        // Telegram Bot Token - এখানে আপনার বটের টোকেন দিন
+        const TELEGRAM_BOT_TOKEN = '7673657711:AAG9aHlpI8_Egvwi0fY9rxA4qyEfqOw16nU';
+        
+        // DOM elements
+        const pageTitle = document.getElementById('page-title');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const tabLinks = document.querySelectorAll('.sidebar-menu a');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        // Stats elements
+        const totalUsers = document.getElementById('total-users');
+        const totalTasks = document.getElementById('total-tasks');
+        const pendingSubmissions = document.getElementById('pending-submissions');
+        const totalPayout = document.getElementById('total-payout');
+        
+        // Buttons
+        const addTaskBtn = document.getElementById('add-task-btn');
+        const saveTaskBtn = document.getElementById('save-task-btn');
+        const saveSubmissionBtn = document.getElementById('save-submission-btn');
+        const viewScreenshotBtn = document.getElementById('view-screenshot-btn');
+        const downloadScreenshotBtn = document.getElementById('download-screenshot-btn');
+        
+        // Modals
+        const taskModal = document.getElementById('task-modal');
+        const submissionDetailModal = document.getElementById('submission-detail-modal');
+        const closeButtons = document.querySelectorAll('.close');
+        
+        // Global variables
+        let currentSubmissionId = null;
+        let currentTaskId = null;
+        let currentSubmissionData = null;
+        
+        // Event listeners
+        tabLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tab = link.dataset.tab;
+                
+                // Update active tab
+                tabLinks.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+                
+                // Show corresponding content
+                tabContents.forEach(content => content.classList.remove('active'));
+                document.getElementById(`${tab}-tab`).classList.add('active');
+                
+                // Update page title
+                pageTitle.textContent = link.textContent.trim();
+                
+                // Load data for the tab
+                if (tab === 'tasks') {
+                    loadTasks();
+                } else if (tab === 'submissions') {
+                    loadAllSubmissions();
+                } else if (tab === 'users') {
+                    loadUsers();
+                } else if (tab === 'transactions') {
+                    loadTransactions();
+                } else if (tab === 'dashboard') {
+                    loadDashboard();
+                }
+            });
+        });
+        
+        refreshBtn.addEventListener('click', () => {
+            const activeTab = document.querySelector('.sidebar-menu a.active').dataset.tab;
+            if (activeTab === 'tasks') {
+                loadTasks();
+            } else if (activeTab === 'submissions') {
+                loadAllSubmissions();
+            } else if (activeTab === 'users') {
+                loadUsers();
+            } else if (activeTab === 'transactions') {
+                loadTransactions();
+            } else if (activeTab === 'dashboard') {
+                loadDashboard();
+            }
+        });
+        
+        addTaskBtn.addEventListener('click', () => {
+            document.getElementById('modal-task-title').textContent = 'নতুন টাস্ক যোগ করুন';
+            document.getElementById('task-number').value = '';
+            document.getElementById('task-title').value = '';
+            document.getElementById('task-description').value = '';
+            document.getElementById('task-amount').value = '';
+            document.getElementById('task-video').value = '';
+            document.getElementById('work-link').value = '';
+            document.getElementById('task-difficulty').value = 'Easy';
+            document.getElementById('task-time').value = '5';
+            document.getElementById('require-screenshot').checked = true;
+            document.getElementById('require-review-link').checked = true;
+            currentTaskId = null;
+            taskModal.style.display = 'block';
+        });
+        
+        saveTaskBtn.addEventListener('click', saveTask);
+        saveSubmissionBtn.addEventListener('click', updateSubmissionStatus);
+        viewScreenshotBtn.addEventListener('click', viewScreenshot);
+        
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                taskModal.style.display = 'none';
+                submissionDetailModal.style.display = 'none';
+            });
+        });
+        
+        // Close modals if clicked outside
+        window.addEventListener('click', (e) => {
+            if (e.target === taskModal) {
+                taskModal.style.display = 'none';
+            }
+            if (e.target === submissionDetailModal) {
+                submissionDetailModal.style.display = 'none';
+            }
+        });
+        
+        // Functions
+        function loadDashboard() {
+            // Load stats
+            loadStats();
+            
+            // Load recent submissions
+            loadRecentSubmissions();
+        }
+        
+        function loadStats() {
+            // Load total users
+            db.collection('users').get().then(snapshot => {
+                totalUsers.textContent = snapshot.size;
+            });
+            
+            // Load total tasks
+            db.collection('AdminTasks').get().then(snapshot => {
+                totalTasks.textContent = snapshot.size;
+            });
+            
+            // Load pending submissions
+            db.collection('GoogleReviewTask')
+                .where('status', '==', 'pending')
+                .get()
+                .then(snapshot => {
+                    pendingSubmissions.textContent = snapshot.size;
+                });
+            
+            // Load total payout (approved submissions)
+            db.collection('GoogleReviewTask')
+                .where('status', '==', 'approved')
+                .get()
+                .then(snapshot => {
+                    let total = 0;
+                    snapshot.forEach(doc => {
+                        total += parseInt(doc.data().amount || 0);
+                    });
+                    totalPayout.textContent = `${total}৳`;
+                });
+        }
+        
+        function loadRecentSubmissions() {
+            const tbody = document.getElementById('recent-submissions');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;"><div class="loader"></div></td></tr>';
+            
+            db.collection('GoogleReviewTask')
+                .orderBy('created_at', 'desc')
+                .limit(5)
+                .get()
+                .then(snapshot => {
+                    tbody.innerHTML = '';
+                    
+                    if (snapshot.empty) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">কোন সাবমিশন পাওয়া যায়নি</td></tr>';
+                        return;
+                    }
+                    
+                    snapshot.forEach(doc => {
+                        const submission = doc.data();
+                        const row = document.createElement('tr');
+                        
+                        // Get user info
+                        let userName = 'অজানা ইউজার';
+                        if (submission.user_id) {
+                            db.collection('users').doc(submission.user_id).get()
+                                .then(userDoc => {
+                                    if (userDoc.exists) {
+                                        const userData = userDoc.data();
+                                        userName = `${userData.first_name} ${userData.last_name || ''}`;
+                                        row.querySelector('.user-name').textContent = userName;
+                                    }
+                                });
+                        }
+                        
+                        // Get task info
+                        let taskTitle = 'অজানা টাস্ক';
+                        let taskNumber = 'N/A';
+                        if (submission.task_id) {
+                            db.collection('AdminTasks').doc(submission.task_id).get()
+                                .then(taskDoc => {
+                                    if (taskDoc.exists) {
+                                        const taskData = taskDoc.data();
+                                        taskTitle = taskData.title;
+                                        taskNumber = taskData.task_number || 'N/A';
+                                        row.querySelector('.task-title').textContent = taskTitle;
+                                        row.querySelector('.task-number').textContent = taskNumber;
+                                    }
+                                });
+                        }
+                        
+                        const statusClass = `status-${submission.status}`;
+                        
+                        row.innerHTML = `
+                            <td class="user-name">${userName}</td>
+                            <td class="task-title">${taskTitle} <span class="task-number">(#${taskNumber})</span></td>
+                            <td>${submission.amount}৳</td>
+                            <td><span class="status-badge ${statusClass}">${submission.status}</span></td>
+                            <td>${new Date(submission.created_at).toLocaleDateString('bn-BD')}</td>
+                            <td>
+                                <button class="btn btn-info btn-sm view-submission" data-id="${doc.id}">ডিটেইলস</button>
+                            </td>
+                        `;
+                        
+                        tbody.appendChild(row);
+                    });
+                    
+                    // Add event listeners to view buttons
+                    document.querySelectorAll('.view-submission').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const submissionId = btn.dataset.id;
+                            viewSubmissionDetails(submissionId);
+                        });
+                    });
+                })
+                .catch(error => {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">ডেটা লোড করতে সমস্যা হয়েছে</td></tr>';
+                    console.error('Error loading recent submissions:', error);
+                });
+        }
+        
+        function loadTasks() {
+            const tbody = document.getElementById('tasks-list');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;"><div class="loader"></div></td></tr>';
+            
+            db.collection('AdminTasks').get()
+                .then(snapshot => {
+                    tbody.innerHTML = '';
+                    
+                    if (snapshot.empty) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">কোন টাস্ক পাওয়া যায়নি</td></tr>';
+                        return;
+                    }
+                    
+                    snapshot.forEach(doc => {
+                        const task = doc.data();
+                        const row = document.createElement('tr');
+                        
+                        row.innerHTML = `
+                            <td>${task.task_number || 'N/A'}</td>
+                            <td>${task.title}</td>
+                            <td>${task.description || 'কোন বিবরণ নেই'}</td>
+                            <td>${task.amount}৳</td>
+                            <td><span class="status-badge status-active">সক্রিয়</span></td>
+                            <td class="action-buttons">
+                                <button class="btn btn-primary btn-sm edit-task" data-id="${doc.id}">এডিট</button>
+                                <button class="btn btn-danger btn-sm delete-task" data-id="${doc.id}">ডিলিট</button>
+                            </td>
+                        `;
+                        
+                        tbody.appendChild(row);
+                    });
+                    
+                    // Add event listeners to edit and delete buttons
+                    document.querySelectorAll('.edit-task').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const taskId = btn.dataset.id;
+                            editTask(taskId);
+                        });
+                    });
+                    
+                    document.querySelectorAll('.delete-task').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const taskId = btn.dataset.id;
+                            deleteTask(taskId);
+                        });
+                    });
+                })
+                .catch(error => {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">টাস্ক লোড করতে সমস্যা হয়েছে</td></tr>';
+                    console.error('Error loading tasks:', error);
+                });
+        }
+        
+        function loadAllSubmissions() {
+            const tbody = document.getElementById('submissions-list');
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;"><div class="loader"></div></td></tr>';
+            
+            db.collection('GoogleReviewTask')
+                .orderBy('created_at', 'desc')
+                .get()
+                .then(snapshot => {
+                    tbody.innerHTML = '';
+                    
+                    if (snapshot.empty) {
+                        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">কোন সাবমিশন পাওয়া যায়নি</td></tr>';
+                        return;
+                    }
+                    
+                    snapshot.forEach(doc => {
+                        const submission = doc.data();
+                        const row = document.createElement('tr');
+                        
+                        // Get task info
+                        let taskTitle = 'অজানা টাস্ক';
+                        let taskNumber = 'N/A';
+                        if (submission.task_id) {
+                            db.collection('AdminTasks').doc(submission.task_id).get()
+                                .then(taskDoc => {
+                                    if (taskDoc.exists) {
+                                        const taskData = taskDoc.data();
+                                        taskTitle = taskData.title;
+                                        taskNumber = taskData.task_number || 'N/A';
+                                        row.querySelector('.task-title').textContent = taskTitle;
+                                        row.querySelector('.task-number').textContent = taskNumber;
+                                    }
+                                });
+                        }
+                        
+                        // Get user info
+                        let userName = 'অজানা ইউজার';
+                        if (submission.user_id) {
+                            db.collection('users').doc(submission.user_id).get()
+                                .then(userDoc => {
+                                    if (userDoc.exists) {
+                                        const userData = userDoc.data();
+                                        userName = `${userData.first_name} ${userData.last_name || ''}`;
+                                        row.querySelector('.user-name').textContent = userName;
+                                    }
+                                });
+                        }
+                        
+                        const statusClass = `status-${submission.status}`;
+                        
+                        row.innerHTML = `
+                            <td class="task-number">${taskNumber}</td>
+                            <td class="user-name">${userName}</td>
+                            <td class="task-title">${taskTitle}</td>
+                            <td>${submission.amount}৳</td>
+                            <td><span class="status-badge ${statusClass}">${submission.status}</span></td>
+                            <td>${new Date(submission.created_at).toLocaleDateString('bn-BD')}</td>
+                            <td>
+                                <button class="btn btn-info btn-sm view-submission" data-id="${doc.id}">ডিটেইলস</button>
+                            </td>
+                        `;
+                        
+                        tbody.appendChild(row);
+                    });
+                    
+                    // Add event listeners to view buttons
+                    document.querySelectorAll('.view-submission').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const submissionId = btn.dataset.id;
+                            viewSubmissionDetails(submissionId);
+                        });
+                    });
+                })
+                .catch(error => {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">সাবমিশন লোড করতে সমস্যা হয়েছে</td></tr>';
+                    console.error('Error loading submissions:', error);
+                });
+        }
+        
+        function viewSubmissionDetails(submissionId) {
+            currentSubmissionId = submissionId;
+            
+            db.collection('GoogleReviewTask').doc(submissionId).get()
+                .then(doc => {
+                    if (doc.exists) {
+                        const submission = doc.data();
+                        currentSubmissionData = submission;
+                        
+                        // Set basic details
+                        document.getElementById('detail-submission-id').textContent = submissionId;
+                        document.getElementById('detail-user-id').textContent = submission.user_id;
+                        document.getElementById('detail-task-id').textContent = submission.task_id;
+                        document.getElementById('detail-amount').textContent = `${submission.amount}৳`;
+                        document.getElementById('detail-status').textContent = submission.status;
+                        document.getElementById('detail-created-at').textContent = new Date(submission.created_at).toLocaleString('bn-BD');
+                        document.getElementById('detail-status-select').value = submission.status;
+                        
+                        // Set screenshot
+                        const screenshotImg = document.getElementById('detail-screenshot');
+                        const screenshotContainer = document.getElementById('screenshot-container');
+                        const downloadBtn = document.getElementById('download-screenshot-btn');
+                        
+                        if (submission.screenshot && submission.screenshot !== 'not_required') {
+                            screenshotImg.src = submission.screenshot;
+                            downloadBtn.href = submission.screenshot;
+                            screenshotContainer.style.display = 'block';
+                        } else {
+                            screenshotContainer.style.display = 'none';
+                        }
+                        
+                        // Set review link
+                        const reviewLinkContainer = document.getElementById('review-link-container');
+                        const reviewLink = document.getElementById('detail-review-link');
+                        
+                        if (submission.review_link) {
+                            reviewLink.href = submission.review_link;
+                            reviewLink.textContent = submission.review_link;
+                            reviewLinkContainer.style.display = 'block';
+                        } else {
+                            reviewLinkContainer.style.display = 'none';
+                        }
+                        
+                        // Get task details
+                        if (submission.task_id) {
+                            db.collection('AdminTasks').doc(submission.task_id).get()
+                                .then(taskDoc => {
+                                    if (taskDoc.exists) {
+                                        const taskData = taskDoc.data();
+                                        document.getElementById('detail-task-title').textContent = taskData.title;
+                                        document.getElementById('detail-task-number').textContent = taskData.task_number || 'N/A';
+                                    }
+                                });
+                        }
+                        
+                        // Set default notification message based on status
+                        const messageTextarea = document.getElementById('detail-notification-message');
+                        if (submission.status === 'pending') {
+                            messageTextarea.value = 'আপনার সাবমিশন রিভিউাধীন আছে। শীঘ্রই আপডেট পাবেন।';
+                        } else if (submission.status === 'approved') {
+                            messageTextarea.value = 'আপনার সাবমিশন অনুমোদিত হয়েছে। টাকা আপনার অ্যাকাউন্টে যোগ করা হয়েছে।';
+                        } else if (submission.status === 'rejected') {
+                            messageTextarea.value = 'দুঃখিত, আপনার সাবমিশন বাতিল হয়েছে। বিস্তারিত জানতে সহায়তা কেন্দ্রে联系 করুন।';
+                        }
+                        
+                        // Disable form if already approved/rejected
+                        const isApprovedOrRejected = submission.status === 'approved' || submission.status === 'rejected';
+                        document.getElementById('detail-status-select').disabled = isApprovedOrRejected;
+                        document.getElementById('detail-notification-message').disabled = isApprovedOrRejected;
+                        document.getElementById('save-submission-btn').disabled = isApprovedOrRejected;
+                        
+                        // Show watermark if approved
+                        const watermark = document.getElementById('review-watermark');
+                        if (submission.status === 'approved') {
+                            watermark.style.display = 'block';
+                            watermark.textContent = 'APPROVED';
+                        } else if (submission.status === 'rejected') {
+                            watermark.style.display = 'block';
+                            watermark.textContent = 'REJECTED';
+                        } else {
+                            watermark.style.display = 'none';
+                        }
+                        
+                        submissionDetailModal.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    alert('সাবমিশন ডিটেইলস লোড করতে সমস্যা হয়েছে');
+                    console.error('Error loading submission details:', error);
+                });
+        }
+        
+        function viewScreenshot() {
+            const screenshotUrl = document.getElementById('detail-screenshot').src;
+            if (screenshotUrl) {
+                window.open(screenshotUrl, '_blank');
+            }
+        }
+        
+        function updateSubmissionStatus() {
+            const status = document.getElementById('detail-status-select').value;
+            const message = document.getElementById('detail-notification-message').value;
+            
+            if (!currentSubmissionId) return;
+            
+            db.collection('GoogleReviewTask').doc(currentSubmissionId).update({
+                status: status
+            })
+            .then(() => {
+                // If approved, update user balance
+                if (status === 'approved' && currentSubmissionData.status !== 'approved') {
+                    // Update user balance
+                    const userBalanceRef = db.collection('userBalances').doc(currentSubmissionData.user_id);
+                    
+                    userBalanceRef.get().then(balanceDoc => {
+                        let currentBalance = 0;
+                        if (balanceDoc.exists) {
+                            currentBalance = balanceDoc.data().GoogleReviewEarn || 0;
+                        }
+                        
+                        userBalanceRef.set({
+                            GoogleReviewEarn: currentBalance + parseInt(currentSubmissionData.amount),
+                            updated_at: new Date().toISOString()
+                        }, { merge: true });
+                    });
+                    
+                    // Update user stats
+                    const userRef = db.collection('users').doc(currentSubmissionData.user_id);
+                    userRef.update({
+                        pending_work: firebase.firestore.FieldValue.increment(-1),
+                        total_work: firebase.firestore.FieldValue.increment(1)
+                    });
+                    
+                    // Add transaction to history
+                    db.collection('transferHistory').add({
+                        user_id: currentSubmissionData.user_id,
+                        type: 'task_reward',
+                        amount: currentSubmissionData.amount,
+                        status: 'completed',
+                        task_id: currentSubmissionData.task_id,
+                        submission_id: currentSubmissionId,
+                        created_at: new Date().toISOString()
+                    });
+                }
+                
+                // Send notification to user if message provided
+                if (message && currentSubmissionData.user_id) {
+                    sendTelegramMessage(currentSubmissionData.user_id, message);
+                }
+                
+                alert('সাবমিশন স্ট্যাটাস সফলভাবে আপডেট করা হয়েছে');
+                submissionDetailModal.style.display = 'none';
+                
+                // Reload data
+                if (document.getElementById('submissions-tab').classList.contains('active')) {
+                    loadAllSubmissions();
+                } else {
+                    loadDashboard();
+                }
+            })
+            .catch(error => {
+                alert('সাবমিশন স্ট্যাটাস আপডেট করতে সমস্যা হয়েছে');
+                console.error('Error updating submission status:', error);
+            });
+        }
+        
+        function editTask(taskId) {
+            db.collection('AdminTasks').doc(taskId).get()
+                .then(doc => {
+                    if (doc.exists) {
+                        const task = doc.data();
+                        document.getElementById('modal-task-title').textContent = 'টাস্ক এডিট করুন';
+                        document.getElementById('task-number').value = task.task_number || '';
+                        document.getElementById('task-title').value = task.title;
+                        document.getElementById('task-description').value = task.description || '';
+                        document.getElementById('task-amount').value = task.amount;
+                        document.getElementById('task-video').value = task.video_url || '';
+                        document.getElementById('work-link').value = task.work_link || '';
+                        document.getElementById('task-difficulty').value = task.difficulty || 'Easy';
+                        document.getElementById('task-time').value = task.time || '5';
+                        document.getElementById('require-screenshot').checked = task.require_screenshot !== false;
+                        document.getElementById('require-review-link').checked = task.require_review_link !== false;
+                        currentTaskId = taskId;
+                        taskModal.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    alert('টাস্ক লোড করতে সমস্যা হয়েছে');
+                    console.error('Error loading task:', error);
+                });
+        }
+        
+        function deleteTask(taskId) {
+            if (confirm('আপনি কি এই টাস্ক ডিলিট করতে চান?')) {
+                db.collection('AdminTasks').doc(taskId).delete()
+                    .then(() => {
+                        alert('টাস্ক সফলভাবে ডিলিট করা হয়েছে');
+                        loadTasks();
+                    })
+                    .catch(error => {
+                        alert('টাস্ক ডিলিট করতে সমস্যা হয়েছে');
+                        console.error('Error deleting task:', error);
+                    });
+            }
+        }
+        
+        function saveTask() {
+            const taskNumber = document.getElementById('task-number').value;
+            const title = document.getElementById('task-title').value;
+            const description = document.getElementById('task-description').value;
+            const amount = document.getElementById('task-amount').value;
+            const videoUrl = document.getElementById('task-video').value;
+            const workLink = document.getElementById('work-link').value;
+            const difficulty = document.getElementById('task-difficulty').value;
+            const time = document.getElementById('task-time').value;
+            const requireScreenshot = document.getElementById('require-screenshot').checked;
+            const requireReviewLink = document.getElementById('require-review-link').checked;
+            
+            if (!taskNumber || !title || !description || !amount || !workLink) {
+                alert('টাস্ক নম্বর, টাইটেল, বিবরণ, পরিমাণ এবং কাজের লিংক অবশ্যই প্রয়োজন');
+                return;
+            }
+            
+            const taskData = {
+                task_number: taskNumber,
+                title: title,
+                description: description,
+                amount: parseInt(amount),
+                video_url: videoUrl || '',
+                work_link: workLink,
+                difficulty: difficulty,
+                time: time,
+                require_screenshot: requireScreenshot,
+                require_review_link: requireReviewLink,
+                updated_at: new Date().toISOString()
+            };
+            
+            if (currentTaskId) {
+                // Update existing task
+                db.collection('AdminTasks').doc(currentTaskId).update(taskData)
+                    .then(() => {
+                        alert('টাস্ক সফলভাবে আপডেট করা হয়েছে');
+                        taskModal.style.display = 'none';
+                        loadTasks();
+                    })
+                    .catch(error => {
+                        alert('টাস্ক আপডেট করতে সমস্যা হয়েছে');
+                        console.error('Error updating task:', error);
+                    });
+            } else {
+                // Check if task number already exists
+                db.collection('AdminTasks')
+                    .where('task_number', '==', taskNumber)
+                    .get()
+                    .then(snapshot => {
+                        if (!snapshot.empty) {
+                            alert('এই টাস্ক নম্বরটি ইতিমধ্যে存在');
+                            return;
+                        }
+                        
+                        // Add new task
+                        taskData.created_at = new Date().toISOString();
+                        
+                        db.collection('AdminTasks').add(taskData)
+                            .then(() => {
+                                alert('টাস্ক সফলভাবে যোগ করা হয়েছে');
+                                taskModal.style.display = 'none';
+                                loadTasks();
+                            })
+                            .catch(error => {
+                                alert('টাস্ক যোগ করতে সমস্যা হয়েছে');
+                                console.error('Error adding task:', error);
+                            });
+                    })
+                    .catch(error => {
+                        alert('টাস্ক নম্বর চেক করতে সমস্যা হয়েছে');
+                        console.error('Error checking task number:', error);
+                    });
+            }
+        }
+        
+        function loadUsers() {
+            const tbody = document.getElementById('users-list');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;"><div class="loader"></div></td></tr>';
+            
+            db.collection('users').get()
+                .then(snapshot => {
+                    tbody.innerHTML = '';
+                    
+                    if (snapshot.empty) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">কোন ইউজার পাওয়া যায়নি</td></tr>';
+                        return;
+                    }
+                    
+                    snapshot.forEach(doc => {
+                        const user = doc.data();
+                        
+                        // Get user balance
+                        let userBalance = 0;
+                        db.collection('userBalances').doc(doc.id).get()
+                            .then(balanceDoc => {
+                                if (balanceDoc.exists) {
+                                    userBalance = balanceDoc.data().GoogleReviewEarn || 0;
+                                    const balanceCell = document.querySelector(`tr[data-user-id="${doc.id}"] .user-balance`);
+                                    if (balanceCell) {
+                                        balanceCell.textContent = `${userBalance}৳`;
+                                    }
+                                }
+                            });
+                        
+                        const row = document.createElement('tr');
+                        row.dataset.userId = doc.id;
+                        
+                        row.innerHTML = `
+                            <td>${user.first_name} ${user.last_name || ''}</td>
+                            <td>@${user.username || 'no_username'}</td>
+                            <td class="user-balance">0৳</td>
+                            <td>${user.total_work || 0}</td>
+                            <td><span class="status-badge status-active">সক্রিয়</span></td>
+                            <td>${new Date(user.created_at).toLocaleDateString('bn-BD')}</td>
+                        `;
+                        
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">ইউজার লোড করতে সমস্যা হয়েছে</td></tr>';
+                    console.error('Error loading users:', error);
+                });
+        }
+        
+        function loadTransactions() {
+            const tbody = document.getElementById('transactions-list');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;"><div class="loader"></div></td></tr>';
+            
+            db.collection('transferHistory')
+                .orderBy('created_at', 'desc')
+                .get()
+                .then(snapshot => {
+                    tbody.innerHTML = '';
+                    
+                    if (snapshot.empty) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">কোন ট্রানজেকশন পাওয়া যায়নি</td></tr>';
+                        return;
+                    }
+                    
+                    snapshot.forEach(doc => {
+                        const transaction = doc.data();
+                        const row = document.createElement('tr');
+                        
+                        // Get user info
+                        let userName = 'অজানা ইউজার';
+                        if (transaction.user_id) {
+                            db.collection('users').doc(transaction.user_id).get()
+                                .then(userDoc => {
+                                    if (userDoc.exists) {
+                                        const userData = userDoc.data();
+                                        userName = `${userData.first_name} ${userData.last_name || ''}`;
+                                        row.querySelector('.transaction-user').textContent = userName;
+                                    }
+                                });
+                        }
+                        
+                        let typeText = 'অজানা';
+                        if (transaction.type === 'own') {
+                            typeText = 'নিজের অ্যাকাউন্টে ট্রান্সফার';
+                        } else if (transaction.type === 'friend') {
+                            typeText = `বন্ধুর কাছে ট্রান্সফার (${transaction.friend_name || 'অজানা'})`;
+                        } else if (transaction.type === 'task_reward') {
+                            typeText = 'টাস্ক রিওয়ার্ড';
+                        }
+                        
+                        row.innerHTML = `
+                            <td class="transaction-user">${userName}</td>
+                            <td>${typeText}</td>
+                            <td>${transaction.amount}৳</td>
+                            <td>${transaction.status}</td>
+                            <td>${new Date(transaction.created_at).toLocaleDateString('bn-BD')}</td>
+                        `;
+                        
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">ট্রানজেকশন লোড করতে সমস্যা হয়েছে</td></tr>';
+                    console.error('Error loading transactions:', error);
+                });
+        }
+        
+        function sendTelegramMessage(userId, message) {
+            // প্রথমে ইউজারের টেলিগ্রাম চ্যাট আইডি খুঁজে বের করুন
+            db.collection('users').doc(userId).get()
+                .then(userDoc => {
+                    if (userDoc.exists) {
+                        const userData = userDoc.data();
+                        
+                        // এখানে আমরা ধরে নিচ্ছি যে ইউজারের টেলিগ্রাম চ্যাট আইডি userData-তে stored আছে
+                        // যদি না থাকে, তাহলে আপনাকে এই তথ্য টেলিগ্রাম WebApp থেকে সংগ্রহ করতে হবে
+                        const chatId = userData.telegram_chat_id;
+                        
+                        if (!chatId) {
+                            console.error('User chat ID not found');
+                            return;
+                        }
+                        
+                        // টেলিগ্রাম বট API ব্যবহার করে মেসেজ পাঠান
+                        fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                chat_id: chatId,
+                                text: message,
+                                parse_mode: 'HTML'
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (!data.ok) {
+                                console.error('Error sending message:', data);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error sending message:', error);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error getting user data:', error);
+                });
+        }
+        
+        // Initial load
+        loadDashboard();
+    </script>
+</body>
+  </html>q
