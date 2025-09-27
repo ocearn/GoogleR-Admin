@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Google Review System</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #8774e1;
+            --secondary-color: #6c5ce7;
+            --success-color: #00b894;
+            --warning-color: #fdcb6e;
+            --danger-color: #e17055;
+            --dark-color: #2d3436;
+            --light-color: #dfe6e9;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        
+        .sidebar {
+            background: linear-gradient(180deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            height: 100vh;
+            position: fixed;
+            width: 250px;
+            transition: all 0.3s;
+            z-index: 1000;
+            left: -250px;
+        }
+        
+        .sidebar.active {
+            left: 0;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .sidebar-menu li {
+            padding: 0;
+        }
+        
+        .sidebar-menu a {
+            color: white;
+            text-decoration: none;
+            display: block;
+            padding: 15px 20px;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+        
+        .sidebar-menu a:hover, .sidebar-menu a.active {
+            background-color: rgba(255,255,255,0.1);
+            border-left: 4px solid white;
+        }
+        
+        .sidebar-menu i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .main-content {
+            padding: 20px;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        
+        .main-content.sidebar-active {
+            margin-left: 250px;
+            width: calc(100% - 250px);
+        }
+        
+        .navbar {
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            border-radius: 10px;
+            padding: 15px 20px;
+        }
+        
+        .menu-toggle {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--primary-color);
+            cursor: pointer;
+            margin-right: 15px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border: none;
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .stat-title {
+            color: #6c757d;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        .modal-content {
+            border-radius: 15px;
+            border: none;
+        }
+        
+        .form-control, .form-select {
+            border-radius: 10px;
+            padding: 12px 15px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(135, 116, 225, 0.25);
+        }
+        
+        .badge {
+            border-radius: 10px;
+            padding: 6px 12px;
+            font-weight: 500;
+        }
+        
+        .search-box {
+            position: relative;
+        }
+        
+        .search-box input {
+            padding-left: 40px;
+        }
+        
+        .search-box i {
+            position: absolute;
+            left: 15px;
+            top: 12px;
+            color: #6c757d;
+        }
+        
+        .action-buttons .btn {
+            margin-right: 5px;
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .submission-preview img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 20px;
+        }
+        
+        .tab-btn {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+        }
+        
+        .copy-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 12px;
+        }
+        
+        .download-btn {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 12px;
+        }
+        
+        .reject-reason {
+            display: none;
+            margin-top: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                left: -100%;
+            }
+            
+            .main-content.sidebar-active {
+                margin-left: 0;
+                width: 100%;
+            }
+            
+            .stat-number {
+                font-size: 24px;
+            }
+            
+            .table-responsive {
+                font-size: 14px;
+            }
+            
+            .tab-buttons {
+                flex-wrap: wrap;
+            }
+            
+            .tab-btn {
+                padding: 8px 15px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fas fa-crown"></i> Admin Panel</h3>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="#" class="active" data-section="dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+            <li><a href="#" data-section="tasks"><i class="fas fa-tasks"></i> Task Management</a></li>
+            <li><a href="#" data-section="submissions"><i class="fas fa-file-alt"></i> Submissions <span class="notification-badge" id="pending-badge">0</span></a></li>
+            <li><a href="#" data-section="settings"><i class="fas fa-cog"></i> Settings</a></li>
+            <li><a href="#" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Navbar -->
+        <nav class="navbar">
+            <div class="container-fluid">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                
+                <div class="search-box" style="flex: 1; max-width: 400px;">
+                    <i class="fas fa-search"></i>
+                    <input type="text" class="form-control" placeholder="Search Task ID, Title, User Name, Username, User ID, Amount..." id="global-search">
+                </div>
+                
+                <div>
+                    <span class="badge bg-primary" id="online-status">
+                        <i class="fas fa-circle"></i> Online
+                    </span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="content-section">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background-color: rgba(135, 116, 225, 0.1); color: var(--primary-color);">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-number" id="total-users">0</div>
+                        <div class="stat-title">Total Users</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background-color: rgba(0, 184, 148, 0.1); color: var(--success-color);">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <div class="stat-number" id="total-tasks">0</div>
+                        <div class="stat-title">Active Tasks</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background-color: rgba(253, 203, 110, 0.1); color: var(--warning-color);">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-number" id="pending-submissions">0</div>
+                        <div class="stat-title">Pending Reviews</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background-color: rgba(231, 112, 85, 0.1); color: var(--danger-color);">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <div class="stat-number" id="total-earnings">0৳</div>
+                        <div class="stat-title">Total Earnings</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="table-container">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5>Recent Submissions</h5>
+                            <a href="#" class="btn btn-primary btn-sm" data-section="submissions">View All</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Task ID</th>
+                                        <th>Task Title</th>
+                                        <th>Submit Date</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-submissions">
+                                    <!-- Recent submissions will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Task Management Section -->
+        <section id="tasks-section" class="content-section" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4>Task Management</h4>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#taskModal">
+                    <i class="fas fa-plus"></i> Add New Task
+                </button>
+            </div>
+
+            <div class="tab-buttons">
+                <button class="tab-btn active" data-status="all">All Tasks</button>
+                <button class="tab-btn" data-status="active">Active</button>
+                <button class="tab-btn" data-status="deactive">DeActive</button>
+                <button class="tab-btn" data-status="completed">Completed</button>
+            </div>
+
+            <div class="table-container">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Task ID</th>
+                                <th>Title</th>
+                                <th>Amount</th>
+                                <th>Progress</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasks-table">
+                            <!-- Tasks will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Submissions Section -->
+        <section id="submissions-section" class="content-section" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4>Submission Management</h4>
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary active" data-status="all">All</button>
+                    <button class="btn btn-outline-warning" data-status="pending">Pending</button>
+                    <button class="btn btn-outline-success" data-status="approved">Approved</button>
+                    <button class="btn btn-outline-danger" data-status="rejected">Rejected</button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Task ID</th>
+                                <th>Task Title</th>
+                                <th>Submit Date</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="submissions-table">
+                            <!-- Submissions will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings Section -->
+        <section id="settings-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <h5>Notification Settings</h5>
+                        <form id="notification-settings">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="telegram-notifications" checked>
+                                <label class="form-check-label" for="telegram-notifications">Telegram Notifications</label>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="email-notifications">
+                                <label class="form-check-label" for="email-notifications">Email Notifications</label>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="auto-approval" checked>
+                                <label class="form-check-label" for="auto-approval">Auto Approval for Trusted Users</label>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Approval Delay (Minutes)</label>
+                                <input type="number" class="form-control" id="approval-delay" value="5" min="0">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save Settings</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <h5>System Information</h5>
+                        <div class="mb-3">
+                            <strong>Total Users:</strong> <span id="sys-total-users">0</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Active Tasks:</strong> <span id="sys-active-tasks">0</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Pending Submissions:</strong> <span id="sys-pending-submissions">0</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>System Uptime:</strong> <span id="sys-uptime">00:00:00</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Last Backup:</strong> <span id="sys-last-backup">Never</span>
+                        </div>
+                        <button class="btn btn-warning me-2" onclick="backupData()"><i class="fas fa-download"></i> Backup Data</button>
+                        <button class="btn btn-danger" onclick="clearCache()"><i class="fas fa-trash"></i> Clear Cache</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Task Modal -->
+    <div class="modal fade" id="taskModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="taskModalTitle">Add New Task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="taskForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Task Title *</label>
+                                    <input type="text" class="form-control" id="task-title" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Task Number *</label>
+                                    <input type="text" class="form-control" id="task-number" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Amount (৳) *</label>
+                                    <input type="number" class="form-control" id="task-amount" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Difficulty</label>
+                                    <select class="form-select" id="task-difficulty">
+                                        <option value="Easy">Easy</option>
+                                        <option value="Medium">Medium</option>
+                                        <option value="Hard">Hard</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Status</label>
+                                    <select class="form-select" id="task-status">
+                                        <option value="active">Active</option>
+                                        <option value="deactive">DeActive</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Work Link *</label>
+                            <input type="url" class="form-control" id="task-work-link" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" id="task-description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Instructions (one per line)</label>
+                            <textarea class="form-control" id="task-instructions" rows="4" placeholder="Enter each instruction on a new line"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Total Required Submissions *</label>
+                                    <input type="number" class="form-control" id="task-total-required" value="50" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Video URL (Optional)</label>
+                                    <input type="url" class="form-control" id="task-video-url">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="task-require-screenshot" checked>
+                            <label class="form-check-label">Require Screenshot</label>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="task-require-review-link" checked>
+                            <label class="form-check-label">Require Review Link</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="saveTaskBtn">Save Task</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submission Preview Modal -->
+    <div class="modal fade" id="submissionPreviewModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Submission Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="submission-preview-content" class="submission-preview">
+                        <!-- Submission details will be loaded here -->
+                    </div>
+                    
+                    <div class="mt-4">
+                        <label class="form-label">Action</label>
+                        <select class="form-select" id="submission-action" onchange="toggleRejectReason()">
+                            <option value="">Select Action</option>
+                            <option value="approve">Approve</option>
+                            <option value="reject">Reject</option>
+                        </select>
+                        
+                        <div class="reject-reason" id="reject-reason">
+                            <label class="form-label mt-3">Rejection Reason</label>
+                            <textarea class="form-control" id="reject-reason-text" rows="3" placeholder="Enter reason for rejection..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="processSubmission()">Submit Action</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCs6ePkTxvMjcERh6yAdvjPqxIu6X7jhRM",
+            authDomain: "fbm-market-bot.firebaseapp.com",
+            databaseURL: "https://fbm-market-bot-default-rtdb.firebaseio.com",
+            projectId: "fbm-market-bot",
+            storageBucket: "fbm-market-bot.firebasestorage.app",
+            messagingSenderId: "711610016805",
+            appId: "1:711610016805:web:c5a019c9af1485ac984bcc"
+        };
+
+        // Telegram Bot Configuration
+        const TELEGRAM_BOT_TOKEN = '7673657711:AAG9aHlpI8_Egvwi0fY9rxA4qyEfqOw16nU'; // Replace with your bot token
+        const TELEGRAM_CHANNEL_ID = '-1003098627237'; // Replace with your channel
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Global variables
+        let currentEditingTask = null;
+        let currentReviewSubmission = null;
+        let systemStartTime = Date.now();
+        let charts = {};
+        let allSubmissions = [];
+        let allTasks = [];
+        let allUsers = [];
+
+        // DOM elements
+        const sidebarLinks = document.querySelectorAll('.sidebar-menu a');
+        const contentSections = document.querySelectorAll('.content-section');
+        const logoutBtn = document.getElementById('logout-btn');
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.querySelector('.sidebar');
+        const mainContent = document.querySelector('.main-content');
+        const saveTaskBtn = document.getElementById('saveTaskBtn');
+        const taskForm = document.getElementById('taskForm');
+        const notificationSettingsForm = document.getElementById('notification-settings');
+
+        // Initialize admin dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAdminAuth();
+            loadDashboardData();
+            setupEventListeners();
+            startSystemUptimeCounter();
+            loadNotificationSettings();
+        });
+
+        function checkAdminAuth() {
+            const isAuthenticated = localStorage.getItem('adminAuthenticated');
+            if (!isAuthenticated) {
+                const password = prompt('Enter Admin Password:');
+                if (password === 'admin123') {
+                    localStorage.setItem('adminAuthenticated', 'true');
+                } else {
+                    alert('Invalid password!');
+                    window.location.href = '/';
+                }
+            }
+        }
+
+        function setupEventListeners() {
+            // Sidebar navigation
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (this.id === 'logout-btn') {
+                        logout();
+                        return;
+                    }
+                    
+                    const section = this.getAttribute('data-section');
+                    showSection(section);
+                    
+                    sidebarLinks.forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    if (window.innerWidth <= 768) {
+                        toggleSidebar();
+                    }
+                });
+            });
+
+            // Menu toggle
+            menuToggle.addEventListener('click', toggleSidebar);
+
+            // Task management
+            saveTaskBtn.addEventListener('click', saveTask);
+
+            // Settings
+            notificationSettingsForm.addEventListener('submit', saveNotificationSettings);
+
+            // Advanced search functionality
+            document.getElementById('global-search').addEventListener('input', performGlobalSearch);
+
+            // Submission filter buttons
+            document.querySelectorAll('[data-status]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('[data-status]').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    const status = this.getAttribute('data-status');
+                    loadSubmissions(status);
+                });
+            });
+
+            // Task status tabs
+            document.querySelectorAll('.tab-buttons .tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.tab-buttons .tab-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    const status = this.getAttribute('data-status');
+                    filterTasksByStatus(status);
+                });
+            });
+
+            // Close modal on successful task save
+            document.getElementById('taskModal').addEventListener('hidden.bs.modal', function() {
+                currentEditingTask = null;
+                taskForm.reset();
+                document.getElementById('taskModalTitle').textContent = 'Add New Task';
+                document.getElementById('task-status').value = 'active';
+            });
+        }
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('active');
+            mainContent.classList.toggle('sidebar-active');
+        }
+
+        function showSection(sectionName) {
+            contentSections.forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            document.getElementById(`${sectionName}-section`).style.display = 'block';
+            
+            switch(sectionName) {
+                case 'tasks':
+                    loadTasks();
+                    break;
+                case 'submissions':
+                    loadAllData().then(() => loadSubmissions());
+                    break;
+                case 'settings':
+                    loadSystemInfo();
+                    break;
+            }
+        }
+
+        async function loadAllData() {
+            try {
+                // Load all submissions (including from deleted tasks)
+                const submissionsSnapshot = await db.collection('GoogleReviewTask')
+                    .orderBy('created_at', 'desc')
+                    .get();
+                allSubmissions = [];
+                submissionsSnapshot.forEach(doc => {
+                    allSubmissions.push({ id: doc.id, ...doc.data() });
+                });
+
+                // Load all tasks
+                const tasksSnapshot = await db.collection('AdminTasks').get();
+                allTasks = [];
+                tasksSnapshot.forEach(doc => {
+                    allTasks.push({ id: doc.id, ...doc.data() });
+                });
+
+                // Load all users
+                const usersSnapshot = await db.collection('users').get();
+                allUsers = [];
+                usersSnapshot.forEach(doc => {
+                    allUsers.push({ id: doc.id, ...doc.data() });
+                });
+
+            } catch (error) {
+                console.error('Error loading all data:', error);
+            }
+        }
+
+        function loadDashboardData() {
+            loadStatistics();
+            loadRecentSubmissions();
+        }
+
+        async function loadStatistics() {
+            try {
+                // Total users
+                const usersSnapshot = await db.collection('users').get();
+                document.getElementById('total-users').textContent = usersSnapshot.size;
+                document.getElementById('sys-total-users').textContent = usersSnapshot.size;
+
+                // Active tasks
+                const tasksSnapshot = await db.collection('AdminTasks').where('status', '==', 'active').get();
+                document.getElementById('total-tasks').textContent = tasksSnapshot.size;
+                document.getElementById('sys-active-tasks').textContent = tasksSnapshot.size;
+
+                // Pending submissions
+                const pendingSnapshot = await db.collection('GoogleReviewTask')
+                    .where('status', '==', 'pending').get();
+                document.getElementById('pending-submissions').textContent = pendingSnapshot.size;
+                document.getElementById('sys-pending-submissions').textContent = pendingSnapshot.size;
+                document.getElementById('pending-badge').textContent = pendingSnapshot.size;
+
+                // Total earnings
+                let totalEarnings = 0;
+                const approvedSnapshot = await db.collection('GoogleReviewTask')
+                    .where('status', '==', 'approved').get();
+                approvedSnapshot.forEach(doc => {
+                    totalEarnings += doc.data().amount || 0;
+                });
+                document.getElementById('total-earnings').textContent = totalEarnings + '৳';
+
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        async function loadRecentSubmissions() {
+            try {
+                const submissionsSnapshot = await db.collection('GoogleReviewTask')
+                    .orderBy('created_at', 'desc')
+                    .limit(5)
+                    .get();
+
+                const tbody = document.getElementById('recent-submissions');
+                tbody.innerHTML = '';
+
+                for (const doc of submissionsSnapshot.docs) {
+                    const submission = doc.data();
+                    const taskDoc = await db.collection('AdminTasks').doc(submission.task_id).get();
+                    const task = taskDoc.exists ? taskDoc.data() : { title: 'Unknown Task', task_number: 'N/A' };
+
+                    const submitDate = new Date(submission.created_at);
+                    const dateString = `${submitDate.getDate()}/${submitDate.getMonth() + 1}/${submitDate.getFullYear()}`;
+
+                    const row = `
+                        <tr>
+                            <td>${task.task_number || 'N/A'}</td>
+                            <td>${task.title}</td>
+                            <td>${dateString}</td>
+                            <td><span class="badge bg-${getStatusColor(submission.status)}">${submission.status}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="previewSubmission('${doc.id}')">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                }
+            } catch (error) {
+                console.error('Error loading recent submissions:', error);
+            }
+        }
+
+        // Task Management Functions
+        async function loadTasks() {
+            try {
+                const tasksSnapshot = await db.collection('AdminTasks').get();
+                allTasks = [];
+                tasksSnapshot.forEach(doc => {
+                    allTasks.push({ id: doc.id, ...doc.data() });
+                });
+
+                displayTasks(allTasks);
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+            }
+        }
+
+        function displayTasks(tasks) {
+            const tbody = document.getElementById('tasks-table');
+            tbody.innerHTML = '';
+
+            tasks.forEach(async (task) => {
+                const counterDoc = await db.collection('TaskCounters').doc(task.id).get();
+                const counter = counterDoc.exists ? counterDoc.data() : { current_count: 0, total_required: 50 };
+                
+                const progress = counter.total_required > 0 ? 
+                    Math.round((counter.current_count / counter.total_required) * 100) : 0;
+
+                const isCompleted = progress >= 100;
+                const status = isCompleted ? 'completed' : (task.status || 'active');
+
+                const row = `
+                    <tr>
+                        <td>${task.task_number || 'N/A'}</td>
+                        <td>${task.title}</td>
+                        <td>${task.amount}৳</td>
+                        <td>
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar" style="width: ${progress}%"></div>
+                            </div>
+                            <small>${counter.current_count}/${counter.total_required}</small>
+                        </td>
+                        <td><span class="badge bg-${getTaskStatusColor(status)}">${status}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" onclick="editTask('${task.id}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteTask('${task.id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function filterTasksByStatus(status) {
+            let filteredTasks = allTasks;
+            
+            if (status === 'active') {
+                filteredTasks = allTasks.filter(task => task.status === 'active');
+            } else if (status === 'deactive') {
+                filteredTasks = allTasks.filter(task => task.status === 'deactive');
+            } else if (status === 'completed') {
+                // For completed, we need to check counter
+                filteredTasks = allTasks.filter(async (task) => {
+                    const counterDoc = await db.collection('TaskCounters').doc(task.id).get();
+                    const counter = counterDoc.exists ? counterDoc.data() : { current_count: 0, total_required: 50 };
+                    return counter.current_count >= counter.total_required;
+                });
+            }
+            
+            displayTasks(filteredTasks);
+        }
+
+        async function saveTask() {
+            try {
+                const taskData = {
+                    title: document.getElementById('task-title').value,
+                    task_number: document.getElementById('task-number').value,
+                    amount: parseInt(document.getElementById('task-amount').value),
+                    difficulty: document.getElementById('task-difficulty').value,
+                    status: document.getElementById('task-status').value,
+                    time: document.getElementById('task-time').value,
+                    work_link: document.getElementById('task-work-link').value,
+                    description: document.getElementById('task-description').value,
+                    instructions: document.getElementById('task-instructions').value.split('\n').filter(i => i.trim()),
+                    video_url: document.getElementById('task-video-url').value,
+                    require_screenshot: document.getElementById('task-require-screenshot').checked,
+                    require_review_link: document.getElementById('task-require-review-link').checked,
+                    updated_at: new Date().toISOString()
+                };
+
+                if (currentEditingTask) {
+                    await db.collection('AdminTasks').doc(currentEditingTask).update(taskData);
+                    
+                    const totalRequired = parseInt(document.getElementById('task-total-required').value);
+                    const counterDoc = await db.collection('TaskCounters').doc(currentEditingTask).get();
+                    if (counterDoc.exists) {
+                        const counter = counterDoc.data();
+                        await db.collection('TaskCounters').doc(currentEditingTask).update({
+                            total_required: totalRequired,
+                            completed: counter.current_count >= totalRequired
+                        });
+                    }
+                    
+                    showNotification('Task updated successfully!', 'success');
+                } else {
+                    taskData.created_at = new Date().toISOString();
+                    const taskRef = await db.collection('AdminTasks').add(taskData);
+                    
+                    const totalRequired = parseInt(document.getElementById('task-total-required').value);
+                    await db.collection('TaskCounters').doc(taskRef.id).set({
+                        total_required: totalRequired,
+                        current_count: 0,
+                        completed: false,
+                        created_at: new Date().toISOString()
+                    });
+                    
+                    showNotification('Task created successfully!', 'success');
+                }
+
+                const modal = bootstrap.Modal.getInstance(document.getElementById('taskModal'));
+                modal.hide();
+                
+                loadTasks();
+                loadDashboardData();
+                
+            } catch (error) {
+                console.error('Error saving task:', error);
+                showNotification('Error saving task: ' + error.message, 'error');
+            }
+        }
+
+        // Submission Management Functions
+        async function loadSubmissions(status = null) {
+            await loadAllData(); // Ensure we have all data
+            
+            let filteredSubmissions = allSubmissions;
+            
+            if (status && status !== 'all') {
+                filteredSubmissions = allSubmissions.filter(sub => sub.status === status);
+            }
+
+            const tbody = document.getElementById('submissions-table');
+            tbody.innerHTML = '';
+
+            filteredSubmissions.forEach(submission => {
+                const task = allTasks.find(t => t.id === submission.task_id) || { title: 'Deleted Task', task_number: 'N/A' };
+                const user = allUsers.find(u => u.id === submission.user_id) || { first_name: 'Unknown', last_name: 'User' };
+
+                const submitDate = new Date(submission.created_at);
+                const dateString = `${submitDate.getDate()}/${submitDate.getMonth() + 1}/${submitDate.getFullYear()}`;
+
+                const row = `
+                    <tr>
+                        <td>${task.task_number || 'N/A'}</td>
+                        <td>${task.title}</td>
+                        <td>${dateString}</td>
+                        <td><span class="badge bg-${getStatusColor(submission.status)}">${submission.status}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="previewSubmission('${submission.id}')">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        async function previewSubmission(submissionId) {
+            try {
+                const submission = allSubmissions.find(s => s.id === submissionId);
+                if (!submission) return;
+
+                const task = allTasks.find(t => t.id === submission.task_id) || { title: 'Deleted Task' };
+                const user = allUsers.find(u => u.id === submission.user_id) || { first_name: 'Unknown', last_name: 'User', username: 'unknown' };
+
+                currentReviewSubmission = submissionId;
+
+                const previewContent = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>User Information</h6>
+                            <p><strong>Name:</strong> ${user.first_name} ${user.last_name || ''}</p>
+                            <p><strong>Username:</strong> @${user.username}</p>
+                            <p><strong>User ID:</strong> ${submission.user_id}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Task Information</h6>
+                            <p><strong>Task:</strong> ${task.title}</p>
+                            <p><strong>Amount:</strong> ${submission.amount}৳</p>
+                            <p><strong>Submitted:</strong> ${new Date(submission.created_at).toLocaleString()}</p>
+                            <p><strong>Status:</strong> <span class="badge bg-${getStatusColor(submission.status)}">${submission.status}</span></p>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6>Review Link</h6>
+                            <p>
+                                <a href="${submission.review_link}" target="_blank" class="btn btn-outline-primary btn-sm">Open Review Link</a>
+                                <button class="copy-btn" onclick="copyToClipboard('${submission.review_link}')">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6>Screenshot</h6>
+                            <img src="${submission.screenshot}" alt="Screenshot" class="img-fluid">
+                            <br>
+                            <button class="download-btn mt-2" onclick="downloadImage('${submission.screenshot}', 'screenshot_${submissionId}')">
+                                <i class="fas fa-download"></i> Download
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('submission-preview-content').innerHTML = previewContent;
+                document.getElementById('submission-action').value = '';
+                document.getElementById('reject-reason').style.display = 'none';
+                document.getElementById('reject-reason-text').value = '';
+                
+                const modal = new bootstrap.Modal(document.getElementById('submissionPreviewModal'));
+                modal.show();
+                
+            } catch (error) {
+                console.error('Error loading submission details:', error);
+                showNotification('Error loading submission details!', 'error');
+            }
+        }
+
+        function toggleRejectReason() {
+            const action = document.getElementById('submission-action').value;
+            const rejectReason = document.getElementById('reject-reason');
+            rejectReason.style.display = action === 'reject' ? 'block' : 'none';
+        }
+
+        async function processSubmission() {
+            const action = document.getElementById('submission-action').value;
+            const rejectReason = document.getElementById('reject-reason-text').value;
+
+            if (!action) {
+                showNotification('Please select an action!', 'error');
+                return;
+            }
+
+            if (action === 'reject' && !rejectReason.trim()) {
+                showNotification('Please provide a rejection reason!', 'error');
+                return;
+            }
+
+            try {
+                const submission = allSubmissions.find(s => s.id === currentReviewSubmission);
+                if (!submission) return;
+
+                const newStatus = action === 'approve' ? 'approved' : 'rejected';
+                
+                // Update submission status
+                await db.collection('GoogleReviewTask').doc(currentReviewSubmission).update({
+                    status: newStatus,
+                    reviewed_at: new Date().toISOString(),
+                    ...(action === 'reject' && { reject_reason: rejectReason })
+                });
+
+                if (action === 'approve') {
+                    // Update user's main balance
+                    const userRef = db.collection('users').doc(submission.user_id);
+                    await userRef.update({
+                        balance: firebase.firestore.FieldValue.increment(submission.amount),
+                        pending_work: firebase.firestore.FieldValue.increment(-1)
+                    });
+                }
+
+                // Send Telegram notification to user
+                await sendTelegramNotification(submission.user_id, newStatus, submission.amount, rejectReason);
+
+                const modal = bootstrap.Modal.getInstance(document.getElementById('submissionPreviewModal'));
+                modal.hide();
+                
+                loadSubmissions();
+                loadDashboardData();
+                showNotification(`Submission ${newStatus} successfully!`, 'success');
+                
+            } catch (error) {
+                console.error('Error processing submission:', error);
+                showNotification('Error processing submission!', 'error');
+            }
+        }
+
+        async function sendTelegramNotification(userId, status, amount, rejectReason = '') {
+            try {
+                const message = status === 'approved' 
+                    ? `✅ আপনার সাবমিশনটি approved হয়েছে! ${amount}৳ আপনার ব্যালেন্সে যোগ করা হয়েছে।`
+                    : `❌ আপনার সাবমিশনটি rejected হয়েছে। কারণ: ${rejectReason}`;
+
+                const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        chat_id: userId,
+                        text: message,
+                        parse_mode: 'HTML'
+                    })
+                });
+
+                if (!response.ok) {
+                    console.error('Telegram API error:', await response.text());
+                }
+            } catch (error) {
+                console.error('Error sending Telegram notification:', error);
+            }
+        }
+
+        // Utility Functions
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showNotification('Link copied to clipboard!', 'success');
+            });
+        }
+
+        function downloadImage(imageUrl, filename) {
+            fetch(imageUrl)
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    showNotification('Image downloaded successfully!', 'success');
+                })
+                .catch(() => {
+                    showNotification('Error downloading image!', 'error');
+                });
+        }
+
+        function performGlobalSearch() {
+            const searchTerm = document.getElementById('global-search').value.toLowerCase().trim();
+            
+            if (!searchTerm) {
+                loadSubmissions();
+                return;
+            }
+
+            const filteredSubmissions = allSubmissions.filter(submission => {
+                const task = allTasks.find(t => t.id === submission.task_id) || {};
+                const user = allUsers.find(u => u.id === submission.user_id) || {};
+                
+                const searchableText = [
+                    task.task_number,
+                    task.title,
+                    user.first_name,
+                    user.last_name,
+                    user.username,
+                    submission.user_id,
+                    submission.amount.toString(),
+                    task.task_number
+                ].filter(Boolean).join(' ').toLowerCase();
+
+                return searchableText.includes(searchTerm);
+            });
+
+            displaySearchResults(filteredSubmissions);
+        }
+
+        function displaySearchResults(submissions) {
+            const tbody = document.getElementById('submissions-table');
+            tbody.innerHTML = '';
+
+            submissions.forEach(submission => {
+                const task = allTasks.find(t => t.id === submission.task_id) || { title: 'Deleted Task', task_number: 'N/A' };
+                const user = allUsers.find(u => u.id === submission.user_id) || { first_name: 'Unknown', last_name: 'User' };
+
+                const submitDate = new Date(submission.created_at);
+                const dateString = `${submitDate.getDate()}/${submitDate.getMonth() + 1}/${submitDate.getFullYear()}`;
+
+                const row = `
+                    <tr>
+                        <td>${task.task_number || 'N/A'}</td>
+                        <td>${task.title}</td>
+                        <td>${dateString}</td>
+                        <td><span class="badge bg-${getStatusColor(submission.status)}">${submission.status}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="previewSubmission('${submission.id}')">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function getStatusColor(status) {
+            switch(status) {
+                case 'approved': return 'success';
+                case 'pending': return 'warning';
+                case 'rejected': return 'danger';
+                default: return 'secondary';
+            }
+        }
+
+        function getTaskStatusColor(status) {
+            switch(status) {
+                case 'active': return 'success';
+                case 'deactive': return 'secondary';
+                case 'completed': return 'primary';
+                default: return 'secondary';
+            }
+        }
+
+        // ... (Rest of the code remains the same as previous version)
+        // Including: showNotification, loadSystemInfo, startSystemUptimeCounter, 
+        // loadNotificationSettings, saveNotificationSettings, logout, editTask, 
+        // deleteTask, backupData, clearCache functions
+
+    </script>
+</body>
+</html>
